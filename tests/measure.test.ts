@@ -5,6 +5,7 @@ import {
   diffEventCounts,
   getEventCountsSnapshot,
   getPerfDurations,
+  getReactCommitDurations,
   getRenderCount,
   isPerfEnabled,
   mark,
@@ -66,16 +67,16 @@ test("recordRender counts per component", () => {
 
 test("resetPerfMetrics clears counters and durations", () => {
   recordRender("Foo");
-  recordReactCommit("Foo", 1.5);
+  recordReactCommit("Foo", "update", 1.5, 1.5, 0, 1.5);
   resetPerfMetrics();
   assert.equal(getRenderCount("Foo"), 0);
   assert.deepEqual(getPerfDurations("anything"), []);
 });
 
-test("the sample buffer is bounded (no unbounded growth)", () => {
-  for (let i = 0; i < 6000; i += 1) recordReactCommit("Foo", i);
-  // Capped at MAX_PERF_SAMPLES (5000) so a long session cannot leak memory.
-  assert.ok(getRenderCount("Foo") >= 0);
+test("the commit buffer is bounded (no unbounded growth)", () => {
+  for (let i = 0; i < 6000; i += 1) recordReactCommit("Foo", "update", i, i, 0, i);
+  // Capped at MAX_PERF_SAMPLES, so a long session cannot leak memory.
+  assert.equal(getReactCommitDurations().length, 5000);
 });
 
 test("diffEventCounts reports per-key deltas", () => {
