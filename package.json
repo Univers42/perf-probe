@@ -1,0 +1,18 @@
+{
+  "name": "@osionos/perf-probe",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Browser performance probe: marks and measures, React commit counters, Event Timing capture and heap sampling, behind a ring buffer that is off unless explicitly enabled. Zero dependencies.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test --experimental-strip-types tests/*.test.ts",
+    "check": "npm run typecheck && npm test"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
