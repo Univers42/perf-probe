@@ -4,12 +4,14 @@ import { beforeEach, test } from "node:test";
 import {
   diffEventCounts,
   getEventCountsSnapshot,
+  getEventLatencySplits,
   getPerfDurations,
   getReactCommitDurations,
   getRenderCount,
   isPerfEnabled,
   mark,
   measure,
+  recordEventTiming,
   recordReactCommit,
   recordRender,
   resetPerfMetrics,
@@ -77,6 +79,18 @@ test("the commit buffer is bounded (no unbounded growth)", () => {
   for (let i = 0; i < 6000; i += 1) recordReactCommit("Foo", "update", i, i, 0, i);
   // Capped at MAX_PERF_SAMPLES, so a long session cannot leak memory.
   assert.equal(getReactCommitDurations().length, 5000);
+});
+
+test("getEventLatencySplits splits a keystroke into delay, handlers and render", () => {
+  recordEventTiming({ name: "keydown", startTime: 100, processingStart: 130, processingEnd: 134, duration: 48 });
+  recordEventTiming({ name: "keydown", startTime: 200, processingStart: 201, processingEnd: 230, duration: 24 });
+  recordEventTiming({ name: "click", startTime: 300, processingStart: 301, processingEnd: 302, duration: 16 });
+  recordEventTiming({ name: "keydown", startTime: 400, duration: 16 });
+  assert.deepEqual(getEventLatencySplits("keydown"), [
+    { total: 48, delay: 30, handlers: 4, render: 14 },
+    // duration is rounded to 8 ms, so it can end before processingEnd: render clamps at 0.
+    { total: 24, delay: 1, handlers: 29, render: 0 },
+  ]);
 });
 
 test("diffEventCounts reports per-key deltas", () => {

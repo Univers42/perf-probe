@@ -177,6 +177,38 @@ export function getEventTimingDurations(): number[] {
   return metrics.eventTimings.map((eventTiming) => eventTiming.duration);
 }
 
+export function recordEventTiming(entry: PerfMetricsState["eventTimings"][number]): void {
+  pushBounded(metrics.eventTimings, entry);
+}
+
+/** One input event, from its timestamp to the next paint: waiting for the main thread,
+ *  running its handlers, then style/layout/paint until the frame lands. */
+export interface EventLatencySplit {
+  total: number;
+  delay: number;
+  handlers: number;
+  render: number;
+}
+
+/**
+ * Caveat: the Event Timing API reports only events of 16 ms or more and rounds `duration`
+ * to 8 ms, so this lists the slow ones only, and `render` is approximate (clamped at 0).
+ * Count all events with `performance.eventCounts` to know how many were fast.
+ */
+export function getEventLatencySplits(name: string): EventLatencySplit[] {
+  const splits: EventLatencySplit[] = [];
+  for (const entry of metrics.eventTimings) {
+    if (entry.name !== name || entry.processingStart === undefined || entry.processingEnd === undefined) continue;
+    splits.push({
+      total: entry.duration,
+      delay: entry.processingStart - entry.startTime,
+      handlers: entry.processingEnd - entry.processingStart,
+      render: Math.max(0, entry.duration - (entry.processingEnd - entry.startTime)),
+    });
+  }
+  return splits;
+}
+
 export function resetPerfMetrics(): void {
   metrics.durations = {};
   metrics.renders = {};
@@ -194,7 +226,7 @@ export function startEventTimingCapture(): void {
           processingStart?: number;
           processingEnd?: number;
         };
-        pushBounded(metrics.eventTimings, {
+        recordEventTiming({
           name: eventEntry.name,
           duration: eventEntry.duration,
           startTime: eventEntry.startTime,
